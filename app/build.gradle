@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.xkjd.practice'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.xkjd.practice"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile rootProject.file('release.keystore')
+            storePassword 'xkjdlearn'
+            keyAlias 'xkjdlearn'
+            keyPassword 'xkjdlearn'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    // 网页 App 不打进 resources，直接放 assets/www
+    aaptOptions {
+        noCompress 'js', 'css', 'html'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        encoding "UTF-8"
+    }
+
+    lint {
+        abortOnError false
+    }
+}

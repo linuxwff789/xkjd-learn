@@ -1,0 +1,71 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK (release, self-signed)
+        run: gradle assembleRelease --no-daemon
+        env:
+          GRADLE_USER_HOME: ${{ github.workspace }}/.gradle-home
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk out/xkjd-learn.apk
+          ls -la out
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xkjd-learn-apk
+          path: out/xkjd-learn.apk
+          if-no-files-found: error
+
+      - name: Get version
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=1.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/xkjd-learn.apk
+          name: 键道练习 v${{ steps.ver.outputs.version }}
+          body: |
+            ## 键道练习 v${{ steps.ver.outputs.version }}
+
+            星空键道6（键道6）学习 App：自带键盘、键面助记图、音码/形码/拆字提示。
+
+            - 三种练习：自由打字 / 看字打码 / 看码选字
+            - 题库：一级简码、二级简码、常用字、常用词组
+            - 三级提示：音码 → 音形 → 全解（拆字 + 笔画）
+            - 完全离线，无需任何权限
+
+            安装：下载 `xkjd-learn.apk` 直接安装（自签名，首次需允许「安装未知应用」）。

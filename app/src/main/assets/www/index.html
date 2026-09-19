@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#12141c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>键道练习 · 星空键道6 学习键盘</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css?v=20260919c">
+</head>
+<body>
+
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand"><span class="star">✦</span> 键道练习</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="practice">练习</button>
+      <button class="tab" data-tab="layout">键位图</button>
+      <button class="tab" data-tab="rules">规则</button>
+    </nav>
+  </header>
+
+  <!-- ═══════════ 练习 ═══════════ -->
+  <main class="page active" id="page-practice">
+
+    <div class="prac-main">
+      <div class="toolbar">
+        <div class="seg" id="mode-seg">
+          <button class="seg-btn active" data-mode="free">自由打字</button>
+          <button class="seg-btn" data-mode="target">看字打码</button>
+          <button class="seg-btn" data-mode="code">看码选字</button>
+        </div>
+        <div class="seg small" id="pool-seg">
+          <button class="seg-btn" data-pool="level1">一级简码</button>
+          <button class="seg-btn active" data-pool="level2">二级简码</button>
+          <button class="seg-btn" data-pool="common">常用字</button>
+          <button class="seg-btn" data-pool="words2">词组</button>
+        </div>
+        <div class="stats">
+          <span title="正确">✔ <b id="st-ok">0</b></span>
+          <span title="错误">✘ <b id="st-bad">0</b></span>
+          <span title="进度">◷ <b id="st-prog">0/0</b></span>
+        </div>
+      </div>
+
+      <!-- 题目区 -->
+      <section class="stage" id="stage">
+        <div class="stage-main">
+          <div class="target" id="target">自由打字</div>
+          <div class="target-sub" id="target-sub">直接在下面的键盘上敲键道编码</div>
+        </div>
+        <div class="stage-side">
+          <button class="ghost" id="btn-hint">提示 <span id="hint-level">关</span></button>
+          <button class="ghost" id="btn-skip">跳过</button>
+        </div>
+      </section>
+
+      <!-- 编码提示 -->
+      <section class="hints" id="hints">
+        <div class="hints-empty">输入编码后显示音码 / 形码 / 拆字提示</div>
+      </section>
+
+      <!-- 候选 -->
+      <section class="cands" id="cands"></section>
+
+      <!-- 上屏区 -->
+      <section class="composer">
+        <div class="committed" id="committed"></div>
+        <div class="preedit"><span id="preedit"></span><span class="caret"></span></div>
+      </section>
+    </div>
+
+    <!-- 自带键盘 -->
+    <section class="kb" id="kb"></section>
+    <div class="kb-note" id="kb-note">长按任意键看助记　·　空格/点候选=上屏　·　看字打码：答对自动下一题并清屏</div>
+  </main>
+
+  <!-- ═══════════ 键位图 ═══════════ -->
+  <main class="page" id="page-layout">
+    <h2>星空键道6 · 键位助记图</h2>
+    <p class="lead">音码 = 双拼（声母 + 韵母）；形码 = 五笔画 + 少量字根。紫色为形码键（a i o u v），其余为音码键。</p>
+    <div class="kb big" id="kb-full"></div>
+    <div class="legend" id="legend"></div>
+  </main>
+
+  <!-- ═══════════ 规则 ═══════════ -->
+  <main class="page" id="page-rules">
+    <h2>速查规则</h2>
+    <div id="rules-body"></div>
+  </main>
+
+</div>
+
+<script>window.APP_V="20260919c";</script>
+<script src="data/keymap.js?v=20260919c"></script>
+<script src="data/roots.js?v=20260919c"></script>
+<script src="data/chars.js?v=20260919c"></script>
+<script src="data/lessons.js?v=20260919c"></script>
+<script src="data/words.js?v=20260919c"></script>
+<script src="js/engine.js?v=20260919c"></script>
+<script src="js/keyboard.js?v=20260919c"></script>
+<script src="js/rules.js?v=20260919c"></script>
+<script src="js/app.js?v=20260919c"></script>
+</body>
+</html>
