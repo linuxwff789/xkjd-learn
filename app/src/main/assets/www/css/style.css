@@ -173,3 +173,6 @@ h2{font-size:17px;margin:6px 0 4px}
 #kb-pop .pk-r b.rc{font-family:ui-monospace,monospace;color:var(--shape);min-width:24px}
 #kb-pop .pk-r span{color:var(--fg2);font-size:12.5px;flex:1}
 .kb .key .dual{font-size:8px}
+
+/* 工具条小按钮 */
+.ghost.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}

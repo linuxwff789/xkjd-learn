@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>键道练习 · 星空键道6 学习键盘</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="css/style.css?v=20260919e">
+<link rel="stylesheet" href="css/style.css?v=20260919f">
 </head>
 <body>
 
@@ -34,17 +34,21 @@
           <button class="seg-btn" data-mode="target">看字打码</button>
           <button class="seg-btn" data-mode="code">看码选字</button>
         </div>
+        <div class="stats">
+          <span title="正确">✔ <b id="st-ok">0</b></span>
+          <span title="错误">✘ <b id="st-bad">0</b></span>
+          <span title="进度">◷ <b id="st-prog">0/0</b></span>
+        </div>
+      </div>
+      <div class="toolbar">
         <div class="seg small" id="pool-seg">
           <button class="seg-btn" data-pool="level1">一级简码</button>
           <button class="seg-btn active" data-pool="level2">二级简码</button>
           <button class="seg-btn" data-pool="common">常用字</button>
           <button class="seg-btn" data-pool="words2">词组</button>
         </div>
-        <div class="stats">
-          <span title="正确">✔ <b id="st-ok">0</b></span>
-          <span title="错误">✘ <b id="st-bad">0</b></span>
-          <span title="进度">◷ <b id="st-prog">0/0</b></span>
-        </div>
+        <button class="ghost" id="btn-shuffle" title="乱序练习">顺序</button>
+        <button class="ghost" id="btn-reset" title="清空该题库的进度">重置</button>
       </div>
 
       <!-- 题目区 -->
@@ -95,15 +99,15 @@
 
 </div>
 
-<script>window.APP_V="20260919e";</script>
-<script src="data/keymap.js?v=20260919e"></script>
-<script src="data/roots.js?v=20260919e"></script>
-<script src="data/chars.js?v=20260919e"></script>
-<script src="data/lessons.js?v=20260919e"></script>
-<script src="data/words.js?v=20260919e"></script>
-<script src="js/engine.js?v=20260919e"></script>
-<script src="js/keyboard.js?v=20260919e"></script>
-<script src="js/rules.js?v=20260919e"></script>
-<script src="js/app.js?v=20260919e"></script>
+<script>window.APP_V="20260919f";</script>
+<script src="data/keymap.js?v=20260919f"></script>
+<script src="data/roots.js?v=20260919f"></script>
+<script src="data/chars.js?v=20260919f"></script>
+<script src="data/lessons.js?v=20260919f"></script>
+<script src="data/words.js?v=20260919f"></script>
+<script src="js/engine.js?v=20260919f"></script>
+<script src="js/keyboard.js?v=20260919f"></script>
+<script src="js/rules.js?v=20260919f"></script>
+<script src="js/app.js?v=20260919f"></script>
 </body>
 </html>

@@ -20,6 +20,7 @@
     sel: 0,
     options: [],           // 看码选字选项
     committedOk: false,
+    store: null,           // 持久化进度
     wrongPick: -1,
     answered: false
   };
@@ -43,16 +44,76 @@
     return h;
   }
 
+  /* ────────── 进度存储（localStorage） ────────── */
+  const LS_KEY = 'xkjd.progress.v1';
+
+  function loadStore() {
+    let d = {};
+    try { d = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (e) { d = {}; }
+    if (!d.pools) d.pools = {};
+    if (!d.last) d.last = {};
+    return d;
+  }
+
+  function saveStore() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(S.store)); } catch (e) { /* 隐私模式等忽略 */ }
+  }
+
+  /** 取某题库的进度记录（没有就新建） */
+  function poolRec(name) {
+    const d = S.store;
+    let r = d.pools[name];
+    if (!r) r = d.pools[name] = { qi: 0, ok: 0, bad: 0, shuffle: false, order: null };
+    return r;
+  }
+
+  function shuffled(n) {
+    const a = [];
+    for (let i = 0; i < n; i++) a.push(i);
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /** 当前题库的题目顺序（乱序时返回下标数组） */
+  function currentOrder(name) {
+    const r = poolRec(name);
+    const n = pool().length;
+    if (!r.shuffle) { r.order = null; return null; }
+    if (!r.order || r.order.length !== n) { r.order = shuffled(n); saveStore(); }
+    return r.order;
+  }
+
+  /** 题库第 i 题 */
+  function itemAt(name, i) {
+    const p = pool();
+    if (!p.length) return null;
+    const ord = currentOrder(name);
+    return p[ord ? ord[i % ord.length] : (i % p.length)];
+  }
+
   /* ────────── 启动 ────────── */
   function init() {
     JD.build();
+    S.store = loadStore();
+    // 恢复上次的模式 / 题库 / 提示等级
+    if (S.store.last.mode) S.mode = S.store.last.mode;
+    if (S.store.last.pool && LESSONS[S.store.last.pool]) S.pool = S.store.last.pool;
+    if (typeof S.store.last.hint === 'number') S.hint = S.store.last.hint;
+    const rec = poolRec(S.pool);
+    S.ok = rec.ok || 0; S.bad = rec.bad || 0; S.qi = rec.qi || 0;
+    S.shuffle = !!rec.shuffle;
+
     KB.render(KBROOT, false);
     KB.onKey(onKey);
     KB.render($('kb-full'), true);
     $('legend').innerHTML = legendHTML();
     $('rules-body').innerHTML = window.RULES_HTML || '';
     bindUI();
-    newRound(true);
+    syncToolbar();
+    newRound('keep');
     update();
     // 空闲时补载扩展词表
     setTimeout(function () {
@@ -79,8 +140,11 @@
         b.classList.add('active');
         S.mode = b.dataset.mode;
         S.hint = S.mode === 'free' ? 3 : 0;
+        S.store.last.mode = S.mode;
+        S.store.last.hint = S.hint;
+        saveStore();
         S.committed = ''; S.committedOk = false;
-        newRound(true);
+        newRound('keep');
         update();
       };
     });
@@ -88,16 +152,41 @@
       b.onclick = function () {
         document.querySelectorAll('#pool-seg .seg-btn').forEach(function (x) { x.classList.remove('active'); });
         b.classList.add('active');
-        S.pool = b.dataset.pool;
-        newRound(true);
+        switchPool(b.dataset.pool);
+        syncToolbar();
+        newRound('keep');
         update();
       };
     });
     $('btn-hint').onclick = function () {
       S.hint = (S.hint + 1) % 4;
+      S.store.last.hint = S.hint;
+      saveStore();
       update();
     };
-    $('btn-skip').onclick = function () { newRound(false); update(); };
+    $('btn-skip').onclick = function () { newRound('next'); update(); };
+
+    $('btn-shuffle').onclick = function () {
+      const r = poolRec(S.pool);
+      r.shuffle = !r.shuffle;
+      r.order = r.shuffle ? shuffled(pool().length) : null;
+      r.qi = 0;
+      saveStore();
+      syncToolbar();
+      newRound('reset');
+      update();
+    };
+    $('btn-reset').onclick = function () {
+      const name = POOL_NAME[S.pool] || S.pool;
+      if (!confirm('重置「' + name + '」的练习进度？\n（进度、正确/错误数都会清零）')) return;
+      const r = poolRec(S.pool);
+      r.qi = 0; r.ok = 0; r.bad = 0;
+      if (r.shuffle) r.order = shuffled(pool().length);
+      S.qi = 0; S.ok = 0; S.bad = 0;
+      saveStore();
+      newRound('reset');
+      update();
+    };
     document.addEventListener('keydown', function (e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'Backspace') { onKey('BS'); e.preventDefault(); }
@@ -111,19 +200,23 @@
   /* ────────── 题目 ────────── */
   function pool() { return (window.LESSONS && LESSONS[S.pool]) || []; }
 
-  function newRound(reset) {
+  /** mode: 'keep' 保持当前进度 | 'next' 下一题 | 'reset' 回到第一题 */
+  function newRound(mode) {
     const p = pool();
     if (!p.length) return;
-    if (reset) { S.qi = 0; }
-    else { S.qi = (S.qi + 1) % p.length; }
+    const r = poolRec(S.pool);
+    if (mode === 'reset') r.qi = 0;
+    else if (mode === 'next') r.qi = (r.qi + 1) % p.length;
+    S.qi = r.qi % p.length;
     S.input = ''; S.sel = 0; S.answered = false; S.cands = [];
     if (S.mode !== 'free') { S.committed = ''; S.committedOk = false; }   // 下一题：清空上屏区
     if (S.mode === 'free') { S.target = null; S.targetCodes = []; }
     else {
-      S.target = p[S.qi % p.length];
+      S.target = itemAt(S.pool, S.qi);
       S.targetCodes = codesOf(S.target);
       if (S.mode === 'code') buildOptions();
     }
+    saveStore();
   }
 
   function codesOf(t) {
@@ -184,10 +277,10 @@
       const t = S.target;
       S.committed = '✔ ' + t;       // 先给个正确反馈，下一题会清掉
       S.committedOk = true;
+      bumpStat('ok');
       update();
       setTimeout(function () {
-        S.ok++;
-        newRound(false);
+        newRound('next');
         update();
         setTimeout(function () { kbLocked = false; }, 250);   // 宽限期：吃掉手快多敲的键
       }, 320);
@@ -197,7 +290,7 @@
       KB.flash(el, 'hit');
     } else {
       KB.flash(el, 'miss');
-      S.bad++;
+      bumpStat('bad');
       S.input = S.input.slice(0, -1);
       S.shake = true;
     }
@@ -209,11 +302,27 @@
     if (!c) { S.input = ''; update(); return; }
     S.committed += c.text;
     S.committedOk = false;
-    if (S.mode !== 'target') S.ok++;
+    if (S.mode !== 'target') bumpStat('ok');
     S.input = '';
     S.cands = [];          // 上屏后清空候选栏
     S.sel = 0;
     update();
+  }
+
+  const POOL_NAME = { level1: '一级简码', level2: '二级简码', common: '常用字', words2: '词组' };
+
+  /** 按钮/标签与状态同步（初始化 & 切换题库时调用） */
+  function syncToolbar() {
+    document.querySelectorAll('#mode-seg .seg-btn').forEach(function (x) {
+      x.classList.toggle('active', x.dataset.mode === S.mode);
+    });
+    document.querySelectorAll('#pool-seg .seg-btn').forEach(function (x) {
+      x.classList.toggle('active', x.dataset.pool === S.pool);
+    });
+    const r = poolRec(S.pool);
+    const bs = $('btn-shuffle');
+    bs.textContent = r.shuffle ? '乱序' : '顺序';
+    bs.classList.toggle('on', !!r.shuffle);
   }
 
   /* ────────── 渲染 ────────── */
@@ -280,11 +389,13 @@
     if (S.answered) return;
     const o = S.options[i];
     if (o === S.target) {
-      S.ok++; S.answered = true; S.wrongPick = -1;
+      S.answered = true; S.wrongPick = -1;
+      bumpStat('ok');
       renderCands(); renderStats();
-      setTimeout(function () { newRound(false); update(); }, 450);
+      setTimeout(function () { newRound('next'); update(); }, 450);
     } else {
-      S.bad++; S.wrongPick = i;
+      S.wrongPick = i;
+      bumpStat('bad');
       renderCands(); renderStats();
       setTimeout(function () { S.wrongPick = -1; renderCands(); }, 500);
     }
@@ -303,6 +414,23 @@
     $('st-ok').textContent = S.ok;
     $('st-bad').textContent = S.bad;
     $('st-prog').textContent = (S.qi + 1) + '/' + pool().length;
+  }
+
+  /** 切题库：把当前计数存回旧题库，载入新题库的计数 */
+  function switchPool(name) {
+    const old = poolRec(S.pool);
+    old.ok = S.ok; old.bad = S.bad;
+    S.pool = name;
+    const r = poolRec(name);
+    S.ok = r.ok || 0; S.bad = r.bad || 0;
+    S.store.last.pool = name;
+    saveStore();
+  }
+
+  function bumpStat(which) {
+    const r = poolRec(S.pool);
+    if (which === 'ok') { S.ok++; r.ok = S.ok; } else { S.bad++; r.bad = S.bad; }
+    saveStore();
   }
 
   /* ────────── 提示 ────────── */
