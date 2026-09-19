@@ -36,22 +36,10 @@
       }).join(' ') + '</td></tr>';
     });
     h += '</table>';
-    h += '<h3 style="font-size:14px;margin:14px 0 6px">形码字根</h3><table><tr><th>码</th><th>字根</th><th>例</th></tr>';
-    ['v', 'i', 'u', 'o', 'a'].forEach(function (k) {
-      const s = ROOTS.strokes[k];
-      h += '<tr><td class="rc">' + k + '</td><td style="font-size:18px">' + s[0] + '</td><td>' + s[1] + '　' + s[2].join('、') + '</td></tr>';
-    });
-    ['a', 'i', 'o', 'u', 'v'].forEach(function (k) {
-      const r = ROOTS.key_root[k];
-      if (!r) return;
-      h += '<tr><td class="rc">' + k + '</td><td style="font-size:18px">' + r[0] + '</td><td>' + r[1].join('；') + '</td></tr>';
-    });
-    ROOTS.dual_root.forEach(function (d) {
-      h += '<tr><td class="rc">' + d[0] + '</td><td style="font-size:18px">' + d[1] + '</td><td>' + d[2] + '</td></tr>';
-    });
-    h += '</table>';
-    h += '<h3 style="font-size:14px;margin:14px 0 6px">声母飞键</h3>' +
-      '<p><code>zh</code> → F（内侧）/ Q（外侧）　<code>ch</code> → W（内侧）/ J（外侧）　<code>sh</code> → E　零声母 → X</p>';
+    h += '<h3 style="font-size:14px;margin:16px 0 6px">声母飞键</h3>' +
+      '<p class="dim"><code>zh</code> → F（内侧）/ Q（外侧）　<code>ch</code> → W（内侧）/ J（外侧）　' +
+      '<code>sh</code> → E　零声母 → X</p>';
+    h += window.ROOT_TABLES_HTML || '';
     return h;
   }
 

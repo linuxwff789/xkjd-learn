@@ -1,7 +1,7 @@
 /* ============================================================
  * keyboard.js — 键道助记键盘
- *  - 每键显示: 韵母(或形码字根) / 字母 / 一简字·笔画 / 双码字根·飞键声母
- *  - 长按任意键弹出该键完整助记
+ *  - 小键盘：每键显示 韵母 / 键名字根(含变体) / 笔画 / 双编码字根 / 一简字
+ *  - 长按任意键：弹出该键【完整】助记（含全部笔画变体与例字）
  * 依赖: KEYMAP / ROOTS / CHARS / JD
  * ============================================================ */
 (function (global) {
@@ -33,15 +33,15 @@
     keyData = {};
     for (let r = 0; r < ROWS.length; r++) {
       for (const k of ROWS[r]) {
-        const duals = (ROOTS.dual_root || []).filter(function (d) { return d[0][0] === k; });
+        const duals = (ROOTS.dual_root || []).filter(function (d) { return d.code[0] === k; });
         const root = ROOTS.key_root[k];
+        const st = ROOTS.strokes[k];
         keyData[k] = {
           letter: k,
           finals: KEYMAP.key_finals[k] || [],
           initials: KEYMAP.key_initials[k] || [],
-          root: root ? root[0] : '',
-          rootAlts: root ? root[1] : [],
-          stroke: JD.STROKE_CHAR[k] || '',
+          root: root || null,
+          stroke: st || null,
           duals: duals,
           simple: simp[k] || '',
           shape: !!SHAPE_KEYS[k]
@@ -51,20 +51,39 @@
     return keyData;
   }
 
-  function keyHTML(k) {
+  /** 键名字根的全部写法（含变体），如 氵水氺 / 亻人 / 木朩 */
+  function rootChars(d) {
+    if (!d.root) return '';
+    const out = [];
+    d.root.variants.forEach(function (v) { if (out.indexOf(v[0]) < 0) out.push(v[0]); });
+    if (out.indexOf(d.root.char) < 0) out.unshift(d.root.char);
+    return out.join('');
+  }
+
+  /** 韵母太长就折成两行（键面只有 ~30px 宽） */
+  function finalsHTML(finals) {
+    const s = finals.join('/');
+    if (s.length <= 5) return s;
+    const i = s.indexOf('/');
+    if (i < 0) return s;
+    return s.slice(0, i) + '<br>' + s.slice(i + 1);
+  }
+
+  function keyHTML(k, big) {
     const d = keyData[k];
     let m, s;
-    if (d.shape) { m = d.root; s = d.stroke; }
-    else {
-      m = d.finals.join('/');
+    if (d.shape) {
+      m = rootChars(d);
+      s = d.stroke ? d.stroke.char : '';
+    } else {
+      m = big ? d.finals.join('/') : finalsHTML(d.finals);
       s = d.simple || '';
     }
     let dual = '';
     if (d.duals.length) {
-      dual = d.duals.slice(0, 2).map(function (x) {
-        return x[1] + (x[0][1] === k ? '' : '<sup>' + x[0][1] + '</sup>');
+      dual = d.duals.map(function (x) {
+        return big ? x.char + '<sup>' + x.code[1] + '</sup>' : x.char;
       }).join('');
-      if (d.duals.length > 2) dual += '…';
     }
     let ini = '';
     if (d.initials.length && d.initials[0] !== k) ini = d.initials.join('');
@@ -83,7 +102,7 @@
     ROWS.forEach(function (row, idx) {
       const div = document.createElement('div');
       div.className = 'kb-row';
-      div.innerHTML = row.map(keyHTML).join('');
+      div.innerHTML = row.map(function (k) { return keyHTML(k, big); }).join('');
       el.appendChild(div);
       if (idx === ROWS.length - 1 && !big) {
         const fn = document.createElement('div');
@@ -119,25 +138,43 @@
     });
   }
 
-  /* ── 长按助记弹窗 ── */
+  /* ── 长按：完整助记 ── */
+  function sec(title, body) {
+    return body ? '<div class="pk-s"><div class="pk-t">' + title + '</div>' + body + '</div>' : '';
+  }
+
   function showPopup(k) {
     const d = keyData[k];
     if (!d) return;
     let html = '<div class="pk-h">' + k.toUpperCase() + ' 键助记</div>';
     if (d.shape) {
-      html += '<div class="pk-r"><span>键名字根</span><b>' + d.root + '</b></div>';
-      html += '<div class="pk-r"><span>笔画字根</span><b>' + d.stroke + '（' + JD.STROKE_NAME[k] + '）</b></div>';
-      if (d.duals.length)
-        html += '<div class="pk-r"><span>双编码字根</span><b>' +
-          d.duals.map(function (x) { return x[1] + '（' + x[0] + '）'; }).join('、') + '</b></div>';
-      html += '<div class="pk-r"><span>字根例</span><b>' + d.rootAlts.join('　') + '</b></div>';
+      // 键名字根（含变体）
+      if (d.root && d.root.variants.length) {
+        html += sec('键名字根', d.root.variants.map(function (v) {
+          return '<div class="pk-r"><b>' + v[0] + '</b><span>' + v[1] + '</span></div>';
+        }).join(''));
+      }
+      // 笔画字根（全部变体）
+      if (d.stroke) {
+        html += sec('笔画字根 ' + d.stroke.char + '（' + d.stroke.name + '）',
+          '<div class="pk-vars">' + d.stroke.variants.map(function (v) {
+            return '<span class="pk-var"><b>' + v[0] + '</b><i>' +
+              ((ROOTS.stroke_cn || {})[v[0]] || '') + '</i><em>' + v[1] + '</em></span>';
+          }).join('') + '</div>');
+      }
+      // 双编码字根（含变体）
+      if (d.duals.length) {
+        html += sec('双编码字根', d.duals.map(function (x) {
+          return '<div class="pk-r"><b class="rc">' + x.code + '</b><span>' +
+            x.variants.map(function (v) { return v[0] + '（' + v[1] + '）'; }).join('　') + '</span></div>';
+        }).join(''));
+      }
     } else {
-      html += '<div class="pk-r"><span>声母</span><b>' + k + '</b></div>';
-      const ini = d.initials.filter(function (x) { return x !== k; });
-      if (ini.length) html += '<div class="pk-r"><span>飞键声母</span><b>' + ini.join(' / ') + '</b></div>';
-      html += '<div class="pk-r"><span>韵母</span><b>' + d.finals.join(' / ') + '</b></div>';
+      html += sec('声母', '<div class="pk-r"><b>' + k + '</b><span>' +
+        (d.initials.filter(function (x) { return x !== k; }).join(' / ') || '—') + '</span></div>');
+      html += sec('韵母', '<div class="pk-r"><b>' + d.finals.join(' / ') + '</b></div>');
     }
-    if (d.simple) html += '<div class="pk-r"><span>一级简码</span><b>' + d.simple + '</b></div>';
+    if (d.simple) html += sec('一级简码', '<div class="pk-r"><b>' + d.simple + '</b></div>');
     let pop = document.getElementById('kb-pop');
     if (!pop) {
       pop = document.createElement('div');
@@ -147,7 +184,7 @@
     pop.innerHTML = html;
     pop.classList.add('show');
     setTimeout(function () {
-      document.addEventListener('pointerdown', function h(e) {
+      document.addEventListener('pointerdown', function () {
         pop.classList.remove('show');
       }, { once: true });
     }, 80);
@@ -159,6 +196,7 @@
     render: function (el, big) { render(el, big); bind(el); },
     onKey: function (fn) { handler = fn; },
     data: build,
+    rootChars: rootChars,
     keyEl: function (root, k) { return root.querySelector('.key[data-key="' + k + '"]'); },
     flash: function (el, cls) {
       if (!el) return;
@@ -167,7 +205,7 @@
       el.classList.add(cls);
       setTimeout(function () { el.classList.remove(cls); }, 280);
     },
-    hintKey: function (root, keys) {           // 给提示涉及到的键加高亮边框
+    hintKey: function (root, keys) {
       root.querySelectorAll('.key.hintable').forEach(function (x) { x.classList.remove('hintable'); });
       (keys || []).forEach(function (k) {
         const el = KB.keyEl(root, k);

@@ -98,10 +98,13 @@ h2{font-size:17px;margin:6px 0 4px}
 .kb-row{display:flex;gap:5px;margin-bottom:5px}
 .key{flex:1 1 0;min-width:0;background:var(--bg2);border:1px solid var(--line);border-radius:var(--kb);
   padding:3px 1px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:52px;position:relative;transition:background .06s,transform .06s}
+  min-height:54px;position:relative;transition:background .06s,transform .06s}
 .key:active,.key.press{background:var(--acc);border-color:var(--acc);transform:translateY(1px)}
-.key .m{font-size:11px;color:var(--sound);line-height:1.15;height:13px;overflow:hidden;white-space:nowrap;
-  text-overflow:ellipsis;max-width:100%}
+.key .m{font-size:9px;color:var(--sound);line-height:1.06;min-height:10px;max-height:20px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:100%;
+  letter-spacing:-0.2px;text-align:center}
+.key .m br{display:block}
+.kb.big .key .m{font-size:12px;white-space:normal;max-height:34px;letter-spacing:0}
 .key .l{font-size:17px;font-weight:700;line-height:1.1}
 .key .s{font-size:10px;color:var(--fg3);line-height:1.1;height:12px;white-space:nowrap}
 .key.shape .m{color:var(--shape)}
@@ -153,3 +156,20 @@ h2{font-size:17px;margin:6px 0 4px}
 .cand.opt{cursor:pointer;min-width:64px}
 .cand.opt .w{font-size:22px}
 .cands-empty{color:var(--fg3);font-size:12px;align-self:center;padding-left:2px}
+
+/* ── 长按助记弹窗（完整字根）── */
+#kb-pop{max-height:70vh;overflow-y:auto;min-width:260px}
+.pk-s{margin:7px 0 9px}
+.pk-t{color:var(--shape);font-size:12px;font-weight:600;margin-bottom:3px;
+  border-bottom:1px solid var(--line);padding-bottom:2px}
+.pk-vars{display:flex;flex-wrap:wrap;gap:3px}
+.pk-var{display:inline-flex;align-items:baseline;gap:3px;background:var(--bg2);border-radius:6px;
+  padding:2px 6px;font-size:13px}
+.pk-var b{font-size:15px}
+.pk-var i{color:var(--fg3);font-style:normal;font-size:11px}
+.pk-var em{color:var(--fg3);font-style:normal;font-size:11px}
+#kb-pop .pk-r{display:flex;gap:8px;align-items:baseline}
+#kb-pop .pk-r b{min-width:44px;font-weight:600}
+#kb-pop .pk-r b.rc{font-family:ui-monospace,monospace;color:var(--shape);min-width:24px}
+#kb-pop .pk-r span{color:var(--fg2);font-size:12.5px;flex:1}
+.kb .key .dual{font-size:8px}

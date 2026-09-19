@@ -1,22 +1,28 @@
 /* ============================================================
- * rules.js — “规则”页：从数据实时生成速查表
+ * rules.js — 规则页 / 键位图页的速查表（全部由数据生成）
+ * 导出: window.RULES_HTML（规则页） window.ROOT_TABLES_HTML（字根表，键位图页复用）
  * ============================================================ */
 (function (global) {
   'use strict';
 
-  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  const CN = ROOTS.stroke_cn || {};
+  const STROKE_KEYS = ['v', 'i', 'u', 'o', 'a'];
+  const KEYNAME_KEYS = ['a', 'i', 'o', 'u', 'v'];
+
+  function tag(list) {
+    return list.map(function (f) { return '<code>' + f + '</code>'; }).join(' ');
+  }
 
   function finalsTable() {
-    const keys = Object.keys(KEYMAP.key_finals).sort();
-    const rows = keys.map(function (k) {
-      const fs = KEYMAP.key_finals[k].slice().sort();
-      return '<tr><td class="rc">' + k + '</td><td>' + fs.map(function (f) {
-        return '<code>' + f + '</code>';
-      }).join(' ') + '</td><td>' + fs.map(function (f) {
-        return f === 'v' ? 'ü' : '';
-      }).join('') + '</td></tr>';
-    }).join('');
-    return '<table><tr><th>键</th><th>韵母</th><th>备注</th></tr>' + rows + '</table>';
+    const kf = KEYMAP.key_finals;
+    let h = '<table><tr><th>键</th><th>韵母</th></tr>';
+    Object.keys(kf).sort().forEach(function (k) {
+      h += '<tr><td class="rc">' + k + '</td><td>' +
+        kf[k].slice().sort().map(function (f) {
+          return '<code>' + (f === 'v' ? 'ü' : f) + '</code>';
+        }).join(' ') + '</td></tr>';
+    });
+    return h + '</table>';
   }
 
   function initialsTable() {
@@ -26,8 +32,8 @@
     const rows = order.filter(function (i) { return ini[i]; }).map(function (i) {
       const k = ini[i];
       let note = '';
-      if (i === 'zh') note = 'F 键(内侧) 或 Q 键(外侧)，见飞键';
-      if (i === 'ch') note = 'J 键(外侧) 或 W 键(内侧)，见飞键';
+      if (i === 'zh') note = 'F 键（内侧）或 Q 键（外侧），见飞键';
+      if (i === 'ch') note = 'J 键（外侧）或 W 键（内侧），见飞键';
       if (i === 'sh') note = '在 E 键';
       return '<tr><td><code>' + i + '</code></td><td class="rc">' + k + '</td><td>' + note + '</td></tr>';
     }).join('');
@@ -36,14 +42,12 @@
 
   function flyTable() {
     const out = [];
-    const tag = function (list) { return list.map(function (f) { return '<code>' + f + '</code>'; }).join(' '); };
     ['ch', 'zh'].forEach(function (ini) {
       const r = KEYMAP.fly[ini];
       const outer = ini === 'zh' ? 'Q' : 'J', inner = ini === 'zh' ? 'F' : 'W';
       const onlyOuter = r.only_q || r.only_j;
       const onlyInner = r.only_f || r.only_w;
-      out.push('<tr><td><code>' + ini + '</code></td><td>仅 ' + outer + '（外侧）</td><td>' +
-        tag(onlyOuter) + '</td></tr>');
+      out.push('<tr><td><code>' + ini + '</code></td><td>仅 ' + outer + '（外侧）</td><td>' + tag(onlyOuter) + '</td></tr>');
       out.push('<tr><td></td><td>仅 ' + inner + '（内侧）</td><td>' + tag(onlyInner) + '</td></tr>');
       out.push('<tr><td></td><td>' + outer + '、' + inner + ' 均可</td><td>' + tag(r.both) + '</td></tr>');
     });
@@ -57,32 +61,45 @@
       }).join('') + '</table>';
   }
 
+  /* 笔画字根：主笔形 + 该键下全部笔形变体 */
   function strokeTable() {
-    return '<table><tr><th>键</th><th>笔形</th><th>名称</th><th>例</th></tr>' +
-      ['v', 'i', 'u', 'o', 'a'].map(function (k) {
-        const s = ROOTS.strokes[k];
-        return '<tr><td class="rc">' + k + '</td><td style="font-size:19px">' + s[0] +
-          '</td><td>' + s[1] + '</td><td>' + s[2].join('、') + '</td></tr>';
-      }).join('') + '</table>';
+    let h = '<table><tr><th>键</th><th>笔形</th><th>名称</th><th>全部笔形变体</th></tr>';
+    STROKE_KEYS.forEach(function (k) {
+      const s = ROOTS.strokes[k];
+      if (!s) return;
+      const vars = s.variants.map(function (v) {
+        const cn = CN[v[0]] || '';
+        return '<span class="pk-var"><b>' + v[0] + '</b><i>' + cn + '</i><em>' + v[1] + '</em></span>';
+      }).join('');
+      h += '<tr><td class="rc">' + k + '</td><td style="font-size:19px">' + s.char +
+        '</td><td>' + s.name + '</td><td><div class="pk-vars">' + vars + '</div></td></tr>';
+    });
+    return h + '</table>';
   }
 
+  /* 键名字根 + 双编码字根（含全部变体） */
   function rootTable() {
-    let h = '<table><tr><th>键</th><th>键名字根</th><th>变体 / 例</th></tr>';
-    ['a', 'i', 'o', 'u', 'v'].forEach(function (k) {
+    let h = '<table><tr><th>键</th><th>键名字根</th><th>全部变体 / 例字</th></tr>';
+    KEYNAME_KEYS.forEach(function (k) {
       const r = ROOTS.key_root[k];
       if (!r) return;
-      h += '<tr><td class="rc">' + k + '</td><td style="font-size:19px">' + r[0] + '</td><td>' +
-        r[1].join('<br>') + '</td></tr>';
+      h += '<tr><td class="rc">' + k + '</td><td style="font-size:19px">' + r.char + '</td><td>' +
+        r.variants.map(function (v) { return '<b>' + v[0] + '</b> ' + v[1]; }).join('<br>') + '</td></tr>';
     });
     h += '</table>';
-    h += '<table><tr><th>双码字根</th><th>字根</th><th>例</th></tr>' +
+    h += '<table><tr><th>编码</th><th>字根</th><th>全部变体 / 例字</th></tr>' +
       ROOTS.dual_root.map(function (d) {
-        return '<tr><td class="rc">' + d[0] + '</td><td style="font-size:19px">' + d[1] + '</td><td>' + d[2] + '</td></tr>';
+        return '<tr><td class="rc">' + d.code + '</td><td style="font-size:19px">' + d.char + '</td><td>' +
+          d.variants.map(function (v) { return '<b>' + v[0] + '</b> ' + v[1]; }).join('<br>') + '</td></tr>';
       }).join('') + '</table>';
     return h;
   }
 
-  const HTML = [
+  global.ROOT_TABLES_HTML =
+    '<h3>形码 · 笔画字根（5 个）</h3>' + strokeTable() +
+    '<h3>形码 · 键名字根（5 个）与双编码字根（7 个）</h3>' + rootTable();
+
+  global.RULES_HTML = [
     '<h3>一、音码（双拼）</h3>',
     '<p>单字音码恒定为两码：<b>声母 + 韵母</b>。韵母键位按“声韵拼合规则”设计，不是简单映射拼音字母。</p>',
     '<p><b>声母表</b>（q/f 飞键 = zh，j/w 飞键 = ch，sh 在 e 键）：</p>', initialsTable(),
@@ -95,9 +112,9 @@
     '韵母合并：<code>e=ê</code>、<code>i=-i(前/后)</code>、<code>uan=üan</code>、<code>un=ün</code>、<code>eng=ueng/ng</code>。</p>',
 
     '<h3>二、形码（五笔画 + 少量字根）</h3>',
-    '<p>形码只用到 <code>a i o u v</code> 五个键，是<b>笔画字根 + 键名字根 + 双编码字根</b>三种字根的组合。</p>',
-    '<h4>笔画字根</h4>', strokeTable(),
-    '<h4>键名字根 &amp; 双编码字根</h4>', rootTable(),
+    '<p>形码只用到 <code>a i o u v</code> 五个键，是<b>笔画字根 + 键名字根 + 双编码字根</b>三种字根的组合。' +
+    '同一个键上的所有笔形/字根写法都算同一个码。</p>',
+    global.ROOT_TABLES_HTML,
     '<h4>字根使用规则</h4>',
     '<table><tr><th>规则</th><th>例</th></tr>' +
     '<tr><td>无中断</td><td>国 <code>gliavv</code>：“国”在“玉”之前提前中断“口”的书写（全包围），不能用“口”作字根</td></tr>' +
@@ -133,9 +150,7 @@
 
     '<h3>关于</h3>',
     '<p class="dim">码表 / 词库 / 笔画表来自 <b>星猫键道 6.3</b>（xmjd6-rere，星空键道 6.2 正式授权续作）；' +
-    '字根表、音码与拆字规则来自键道官方教程（rime-xkjd gitbook）；字频来自 rime-essay 八股文。<br>' +
+    '字根表、音码与拆字规则来自键道官方教程（rime-xkjd gitbook）；字频来自 rime-essay 八股文，主读音来自 Unihan。<br>' +
     '键位表由码表反推 + 官方规则校对，非手抄。拆字为按码表推断，标注“部件名按笔画推断”时仅供参考。</p>'
   ].join('');
-
-  global.RULES_HTML = HTML;
 })(window);
